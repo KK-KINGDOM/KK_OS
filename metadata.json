@@ -1,0 +1,9 @@
+{
+  "name": "KK Mobile OS",
+  "description": "An interactive, full-stack simulation of KK-Mobile-OS, featuring boot animations, a file explorer for the custom OS directory structure, a developer terminal, and a Gemini-powered AI Assistant.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

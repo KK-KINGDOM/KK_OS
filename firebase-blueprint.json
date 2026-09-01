@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "User profile and OS preferences",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "wallpaperId": { "type": "string" },
+        "brightness": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "user_notes": {
+      "title": "User Notes",
+      "description": "User notes saved to cloud",
+      "properties": {
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "content"]
+    },
+    "system_logs": {
+      "title": "System Logs",
+      "description": "System audit logs",
+      "properties": {
+        "uid": { "type": "string" },
+        "message": { "type": "string" },
+        "severity": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "timestamp"]
+    },
+    "backed_up_files": {
+      "title": "Backed Up Files",
+      "description": "User files backed up to cloud storage location",
+      "properties": {
+        "uid": { "type": "string" },
+        "fileName": { "type": "string" },
+        "filePath": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "fileType": { "type": "string" },
+        "content": { "type": "string" },
+        "backedUpAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fileName", "filePath"]
+    }
+  }
+}
