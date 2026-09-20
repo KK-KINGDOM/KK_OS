@@ -94,10 +94,72 @@ const INITIAL_THREADS: MessageThread[] = [
 ];
 
 export default function AppMessages() {
-  const [threads, setThreads] = useState<MessageThread[]>(INITIAL_THREADS);
+  const [threads, setThreads] = useState<MessageThread[]>(() => {
+    let initial = [...INITIAL_THREADS];
+    if (typeof window !== "undefined") {
+      const parentPhone = localStorage.getItem("user_phone_number") || localStorage.getItem("parental_phone_number");
+      const childName = localStorage.getItem("child_name") || "there";
+      if (parentPhone) {
+        initial.unshift({
+          id: "parental_link_sms",
+          name: `Parent (${parentPhone})`,
+          avatarColor: "bg-teal-500",
+          unread: true,
+          time: "Just now",
+          lastMessage: `Hi ${childName}! Your device setup is complete.`,
+          messages: [
+            { sender: "contact", text: `Hi ${childName}! Your device setup is complete and linked to ${parentPhone}. All activities and searches are monitored.`, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
+          ]
+        });
+      }
+    }
+    return initial;
+  });
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [inputMsg, setInputMsg] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Real-time SMS Receiver Listener
+  React.useEffect(() => {
+    const handleNewSms = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.sender && detail.message) {
+        const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setThreads((prev) => {
+          const existing = prev.find((t) => t.id === detail.threadId || t.name === detail.sender);
+          if (existing) {
+            return prev.map((t) =>
+              t.id === existing.id
+                ? {
+                    ...t,
+                    unread: true,
+                    time: "Just now",
+                    lastMessage: detail.message,
+                    messages: [...t.messages, { sender: "contact", text: detail.message, time: timeStr }]
+                  }
+                : t
+            );
+          } else {
+            return [
+              {
+                id: detail.threadId || `thread-${Date.now()}`,
+                name: detail.sender,
+                avatarColor: "bg-teal-500",
+                unread: true,
+                time: "Just now",
+                lastMessage: detail.message,
+                messages: [{ sender: "contact", text: detail.message, time: timeStr }]
+              },
+              ...prev
+            ];
+          }
+        });
+      }
+    };
+
+    window.addEventListener("kk_new_sms_received", handleNewSms);
+    return () => window.removeEventListener("kk_new_sms_received", handleNewSms);
+  }, []);
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
 

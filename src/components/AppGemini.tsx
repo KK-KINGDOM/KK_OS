@@ -1,3 +1,4 @@
+// import { generateAIResponse } from "../utils/ai"; // Removed in favor of direct gemini endpoint
 import React, { useState, useRef, useEffect } from "react";
 import {
   Sparkles,
@@ -14,8 +15,13 @@ import {
   Loader2,
   Ratio,
   Film,
-  Play
+  Play,
+  Download,
+  Share2,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface GeminiMessage {
   id: string;
@@ -69,6 +75,31 @@ export default function AppGemini() {
       setUploadedImage(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveToDocs = (text: string) => {
+    try {
+      const newDoc = {
+        id: Date.now().toString(),
+        title: "Gemini AI Export",
+        content: text,
+        updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+      
+      let docs = [];
+      const saved = localStorage.getItem("kk_docs");
+      if (saved) {
+        docs = JSON.parse(saved);
+      }
+      docs.push(newDoc);
+      localStorage.setItem("kk_docs", JSON.stringify(docs));
+      window.dispatchEvent(new Event("kk_doc_saved"));
+      
+      alert("AI Response successfully saved to Google Docs app!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save doc.");
+    }
   };
 
   const handleAnalyzePhoto = async () => {
@@ -243,21 +274,20 @@ export default function AppGemini() {
     setInput("");
     setIsGenerating(true);
 
+    // Log for parental controls & live parent notification
+    recordChildActivity(promptText, "Gemini AI", "ai_prompt");
+
     try {
       const res = await fetch("/api/gemini/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({
-            role: m.sender === "gemini" ? "assistant" : "user",
-            content: m.text
-          })),
-          model,
-          systemInstruction: "You are Gemini, Google's advanced AI assistant with image analysis and video generation tools."
+          messages: [{ role: "user", content: promptText }],
+          model: model
         })
       });
-
       const data = await res.json();
+      const replyText = data.reply || "No response received.";
       setMessages((prev) => [
         ...prev,
         {
@@ -274,7 +304,7 @@ export default function AppGemini() {
         {
           id: (Date.now() + 1).toString(),
           sender: "gemini",
-          text: `Answer regarding "${promptText}": Google Gemini processed your prompt accurately.`,
+          text: "Sorry, I am having trouble connecting to the AI servers right now.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }
       ]);
@@ -403,6 +433,18 @@ export default function AppGemini() {
               )}
 
               <p className="whitespace-pre-wrap">{msg.text}</p>
+              
+              {msg.sender === "gemini" && (
+                <div className="mt-2 flex items-center gap-2 border-t border-white/10 pt-2">
+                  <button 
+                    onClick={() => handleSaveToDocs(msg.text)}
+                    className="flex items-center gap-1 text-[9px] text-blue-300 hover:text-white transition-colors font-bold bg-blue-900/30 px-2 py-1 rounded"
+                  >
+                    <Download size={10} />
+                    Save to Docs
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}

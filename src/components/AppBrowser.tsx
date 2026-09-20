@@ -15,10 +15,11 @@ import {
   Newspaper,
   Layers,
   Compass,
-  ShieldCheck,
   ShieldAlert,
+  ShieldCheck,
   Lock
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface AppBrowserProps {
   initialQuery?: string;
@@ -82,6 +83,14 @@ export default function AppBrowser({ initialQuery = "" }: AppBrowserProps) {
     setCurrentQuery(query);
     setSearchQuery(query);
     setUrlInput(`https://www.google.com/search?q=${encodeURIComponent(query)}&safe=active`);
+
+    // Log for parental controls & live notification
+    if (!blocked) {
+      recordChildActivity(query, "Browser", "search");
+    } else {
+      recordChildActivity(`[SafeSearch Blocked] Attempted: "${query}"`, "Browser", "security");
+    }
+
     setActiveTab("search");
     setTimeout(() => setIsSearching(false), 400);
   };
@@ -373,41 +382,14 @@ export default function AppBrowser({ initialQuery = "" }: AppBrowserProps) {
 
         {/* 3. SIMULATED / REAL WEB PAGE VIEW */}
         {activeTab === "page" && (
-          <div className="h-full flex flex-col bg-slate-900 p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-[10px] font-mono text-slate-400 truncate max-w-[200px]">{loadedUrl}</span>
-              <span className="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                <ShieldCheck size={10} /> SafeSearch Filtered
-              </span>
-            </div>
-
-            <div className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 overflow-y-auto">
-              <div className="flex items-center gap-2 text-teal-400">
-                <Globe size={18} />
-                <h2 className="text-sm font-bold capitalize">{loadedUrl.replace("https://", "").replace("http://", "").split("/")[0]}</h2>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Welcome to the simulated webpage environment for <strong className="text-white">{loadedUrl}</strong>.
-              </p>
-              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="text-[11px] font-bold text-slate-200">Page Details & Network Summary</h4>
-                <ul className="text-[10px] text-slate-400 space-y-1 font-mono">
-                  <li>• SafeSearch Policy: Strict Enabled</li>
-                  <li>• Protocol: HTTP/2 TLS 1.3</li>
-                  <li>• Status: 200 OK Verified</li>
-                  <li>• Content-Type: text/html; charset=utf-8</li>
-                </ul>
-              </div>
-
-              <div className="pt-2 flex justify-center">
-                <button
-                  onClick={() => setActiveTab("home")}
-                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-slate-950 font-bold text-xs cursor-pointer shadow-md"
-                >
-                  Return to Google Home
-                </button>
-              </div>
-            </div>
+          <div className="h-full flex flex-col bg-slate-900 p-0">
+            {/* We use a real iframe to embed the website. Note: Many major sites block embedding via X-Frame-Options. */}
+            <iframe
+              src={loadedUrl}
+              title="Browser Frame"
+              className="w-full h-full border-none bg-white"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            />
           </div>
         )}
 

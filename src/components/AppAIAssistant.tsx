@@ -1,3 +1,4 @@
+import { generateAIResponse } from "../utils/ai";
 import React, { useState, useRef, useEffect } from "react";
 import {
   Send,
@@ -25,6 +26,8 @@ import {
   SquareCheck,
   AlertCircle
 } from "lucide-react";
+import { playClickSound, playAppLaunchSound } from "../utils/sound";
+import { logSearchActivity } from "../lib/firebase";
 import { ChatMessage } from "../types";
 
 const STORAGE_KEY = "kk_ai_chat_history";
@@ -128,6 +131,12 @@ export default function AppAIAssistant() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
+    // Log for parental controls
+    const parentPhone = typeof window !== "undefined" ? localStorage.getItem("parental_phone_number") : null;
+    if (parentPhone) {
+      logSearchActivity(parentPhone, textToSend, "AppAIAssistant");
+    }
+
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
@@ -146,26 +155,8 @@ export default function AppAIAssistant() {
         headers["x-gemini-api-key"] = customKey;
       }
 
-      const res = await fetch("/api/gemini/chat", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          messages: payloadMessages,
-          model: selectedModel,
-          enableThinking,
-          useMaps,
-          systemInstruction: `You are KK-AI, the built-in system intelligence engine for KK-Mobile-OS running on Krishna's mobile device.
-You give accurate, direct, highly intelligent responses.
-You have expertise in system diagnostics, code execution, terminal commands, translation, and mobile productivity.`,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to fetch response from Gemini AI backend.");
-      }
-
-      const data = await res.json();
+      const replyText = await generateAIResponse(promptText);
+      const data = { reply: replyText };
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: data.reply,

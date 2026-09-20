@@ -40,6 +40,8 @@ interface LockScreenProps {
   onSystemLog: (log: string, severity?: LogSeverity) => void;
   batteryLevel?: number;
   onBatteryChange?: (level: number) => void;
+  onEmergencyCall?: () => void;
+  onQuickCamera?: () => void;
 }
 
 type ScanState = "idle" | "initializing" | "scanning" | "verifying" | "success" | "failed" | "unauthorized_failed";
@@ -64,18 +66,13 @@ const TIMEZONES: TimeZoneOption[] = [
 ];
 
 const CLOCK_FONTS = [
-  { id: "sans", name: "Modern Sans", class: "font-sans font-black tracking-tighter" },
-  { id: "mono", name: "Retro Digital", class: "font-mono font-extrabold tracking-normal" },
-  { id: "serif", name: "Classic Serif", class: "font-serif font-bold tracking-tight" },
-  { id: "cyber", name: "Cyber Heavy", class: "font-sans font-black uppercase tracking-widest" }
+  { id: "sans", name: "Modern Sans", class: "font-sans font-medium tracking-tight" },
+  { id: "serif", name: "Classic Serif", class: "font-serif font-medium tracking-tight" },
 ];
 
 const CLOCK_COLORS = [
-  { id: "teal", name: "Neon Teal", text: "text-teal-300", glow: "bg-teal-500/20", border: "border-teal-500/40" },
-  { id: "white", name: "Pure White", text: "text-white", glow: "bg-white/20", border: "border-white/40" },
-  { id: "amber", name: "Sunset Amber", text: "text-amber-300", glow: "bg-amber-500/20", border: "border-amber-500/40" },
-  { id: "emerald", name: "Matrix Emerald", text: "text-emerald-300", glow: "bg-emerald-500/20", border: "border-emerald-500/40" },
-  { id: "violet", name: "Electric Violet", text: "text-purple-300", glow: "bg-purple-500/20", border: "border-purple-500/40" }
+  { id: "white", name: "Light Mode", text: "text-white", glow: "", border: "border-white/20" },
+  { id: "dark", name: "Dark Mode", text: "text-slate-800", glow: "", border: "border-black/20" },
 ];
 
 export default function LockScreen({
@@ -171,20 +168,13 @@ export default function LockScreen({
     onSystemLog(`[ClockDaemon] LockScreen timezone switched to ${nextTz.name} (${nextTz.timeZone || 'Local'})`, "INFO");
   };
 
-  // Dynamic Frosted Glass Effect parameters derived from battery level
-  const effectiveBattery = Math.max(0, Math.min(100, batteryLevel));
-  // Blur intensity: scales smoothly from 3px (at 0% battery) to 32px (at 100% battery)
-  const blurPx = Math.round(3 + (effectiveBattery / 100) * 29);
-  // Glass tint opacity: 0.12 (low charge) to 0.48 (full charge)
-  const glassAlpha = (0.12 + (effectiveBattery / 100) * 0.36).toFixed(2);
-  // Saturation boost: 100% up to 180%
-  const saturatePct = Math.round(100 + (effectiveBattery / 100) * 80);
-  // Glass border reflection highlight
-  const glassBorderAlpha = (0.08 + (effectiveBattery / 100) * 0.22).toFixed(2);
-  // Glass glare sheen opacity
-  const sheenAlpha = (0.05 + (effectiveBattery / 100) * 0.25).toFixed(2);
-  // Glass ambient glow spread
-  const ambientGlowSpread = Math.round(15 + (effectiveBattery / 100) * 45);
+  // Simple Glass Effect (No battery neon scaling)
+  const blurPx = 16;
+  const glassAlpha = 0.2;
+  const saturatePct = 120;
+  const glassBorderAlpha = 0.1;
+  const sheenAlpha = 0.05;
+  const ambientGlowSpread = 0;
 
   // 3x3 Pattern Lock Screen State
   const [selectedPattern, setSelectedPattern] = useState<number[]>([]);
@@ -717,11 +707,11 @@ export default function LockScreen({
       <div 
         className="absolute inset-0 pointer-events-none transition-all duration-500 ease-out z-0 overflow-hidden"
         style={{
-          backdropFilter: `blur(${blurPx}px) saturate(${saturatePct}%) contrast(${95 + Math.round((effectiveBattery / 100) * 20)}%)`,
-          WebkitBackdropFilter: `blur(${blurPx}px) saturate(${saturatePct}%) contrast(${95 + Math.round((effectiveBattery / 100) * 20)}%)`,
+          backdropFilter: `blur(${blurPx}px) saturate(${saturatePct}%) contrast(${95 + Math.round((batteryLevel / 100) * 20)}%)`,
+          WebkitBackdropFilter: `blur(${blurPx}px) saturate(${saturatePct}%) contrast(${95 + Math.round((batteryLevel / 100) * 20)}%)`,
           backgroundColor: `rgba(15, 23, 42, ${glassAlpha})`,
           border: `1px solid rgba(255, 255, 255, ${glassBorderAlpha})`,
-          boxShadow: `inset 0 0 ${ambientGlowSpread}px rgba(255, 255, 255, ${(effectiveBattery / 100) * 0.15})`
+          boxShadow: `inset 0 0 ${ambientGlowSpread}px rgba(255, 255, 255, ${(batteryLevel / 100) * 0.15})`
         }}
       >
         {/* Glass Prism Sheen & Glare Gradient Overlay */}
@@ -736,82 +726,12 @@ export default function LockScreen({
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
       </div>
 
-      {/* Top Lock status indicator & Dynamic Frosted Glass Badge */}
-      <div className="w-full flex items-center justify-between text-[11px] font-medium text-slate-300 pt-1 z-10">
-        <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-          <ShieldCheck size={12} className="text-teal-400" />
-          <span className="text-[10px] font-semibold tracking-wide text-teal-300">
-            SWIPE TO UNLOCK
-          </span>
+      {/* Top Lock status indicator */}
+      <div className="w-full flex items-center justify-center text-[11px] font-medium text-slate-300 pt-1 z-10 mt-6">
+        <div className="flex flex-col items-center gap-1">
+          <Lock size={16} className="text-white drop-shadow-md" />
         </div>
-
-        {/* Dynamic Frosted Glass & Battery Badge */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            playClickSound();
-            setShowGlassControl(!showGlassControl);
-          }}
-          className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-xl px-2.5 py-1 rounded-full border border-teal-500/30 text-[10px] text-teal-300 font-mono shadow-md hover:border-teal-400 transition-colors cursor-pointer"
-          title="Click to toggle Frosted Glass & Battery Intensity Controls"
-        >
-          <Sparkles size={11} className="text-teal-400 animate-pulse" />
-          <span>{blurPx}px Glass • {effectiveBattery}%</span>
-        </button>
       </div>
-
-      {/* Interactive Frosted Glass Intensity Tester Widget */}
-      {showGlassControl && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="w-full bg-slate-900/90 backdrop-blur-2xl border border-teal-500/40 p-3 rounded-2xl shadow-2xl z-20 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200"
-        >
-          <div className="flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-1.5 font-bold text-teal-300">
-              <Sliders size={13} className="text-teal-400" />
-              <span>Frosted Glass Intensity</span>
-            </div>
-            <span className="text-[10px] font-mono text-slate-400">
-              Blur: <strong className="text-teal-300">{blurPx}px</strong> (Battery: {effectiveBattery}%)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Battery size={14} className="text-slate-400" />
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={effectiveBattery}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (onBatteryChange) onBatteryChange(val);
-              }}
-              className="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-400"
-            />
-            <BatteryCharging size={14} className="text-teal-400" />
-          </div>
-
-          <div className="grid grid-cols-4 gap-1 text-[9px] font-mono">
-            {[15, 40, 70, 100].map((level) => (
-              <button
-                key={level}
-                onClick={() => {
-                  playClickSound();
-                  if (onBatteryChange) onBatteryChange(level);
-                }}
-                className={`py-1 rounded-lg border cursor-pointer transition-all ${
-                  effectiveBattery === level
-                    ? "bg-teal-500 text-slate-950 border-teal-400 font-extrabold shadow"
-                    : "bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-750"
-                }`}
-              >
-                {level}% Battery
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 1. REGULAR LOCKSCREEN DISPLAY */}
       {!showPinPad && !showFaceScanModal && (
@@ -862,16 +782,22 @@ export default function LockScreen({
               className="relative group cursor-pointer active:scale-95 transition-transform my-0.5"
               title={`Tap clock to cycle timezone (Current: ${currentTz.name})`}
             >
-              <h1 className={`text-5xl sm:text-6xl ${currentFont.class} ${currentColor.text} drop-shadow-2xl transition-all duration-300`}>
+              <h1 className={`text-[80px] leading-none font-semibold ${currentFont.class} text-white drop-shadow-md transition-all duration-300`}>
                 {formattedClockTime}
               </h1>
-              <div className={`absolute -inset-3 ${currentColor.glow} blur-2xl rounded-full -z-10 opacity-80 group-hover:opacity-100 transition-opacity`} />
             </div>
 
-            <p className="text-xs font-semibold text-slate-200 tracking-wide drop-shadow-sm flex items-center justify-center gap-1">
+            <p className="text-lg font-medium text-white drop-shadow-md flex items-center justify-center gap-1">
               <span>{formattedClockDate}</span>
-              <span className="text-[10px] text-teal-300/80 font-mono">({currentTz.city})</span>
             </p>
+
+            {/* Child Profile Greeting Badge */}
+            {typeof window !== "undefined" && localStorage.getItem("child_name") && (
+              <div className="mt-1 flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-950/70 border border-teal-500/30 text-[10.5px] font-mono text-teal-300 backdrop-blur-md shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-ping" />
+                <span>Hi, {localStorage.getItem("child_name")}</span>
+              </div>
+            )}
 
             {/* Clock Customizer Modal Popover */}
             {showClockCustomizer && (
@@ -1005,31 +931,7 @@ export default function LockScreen({
             )}
 
             {/* Unlock Actions Row */}
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playClickSound();
-                  handleDirectUnlock();
-                }}
-                className="px-4 py-2 rounded-full bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-[0_0_20px_rgba(45,212,191,0.4)] hover:scale-105 active:scale-95 transition-all"
-              >
-                <Unlock size={16} className="text-slate-950 font-extrabold" />
-                <span>Swipe Up to Open</span>
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playClickSound();
-                  startFaceScan();
-                }}
-                className="px-3 py-2 rounded-full bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-amber-400/40 text-amber-200 font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105 active:scale-95 transition-all"
-                title="Test Face ID Biometric Verification"
-              >
-                <ScanFace size={15} className="text-amber-400" />
-                <span>Face ID Demo</span>
-              </button>
+            <div className="mt-6 flex items-center justify-center gap-2">
             </div>
           </div>
 
@@ -1398,31 +1300,10 @@ export default function LockScreen({
           {/* TAB 1: 3X3 INTERACTIVE PATTERN UNLOCK CANVAS */}
           {lockTab === "pattern" && (
             <div className="flex flex-col items-center gap-3 my-auto w-full max-w-xs">
-              <div className="text-center space-y-1">
-                <div
-                  className={`h-10 w-10 mx-auto rounded-2xl flex items-center justify-center transition-all ${
-                    patternSuccess
-                      ? "bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(52,211,153,0.6)]"
-                      : patternError
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-bounce"
-                      : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
-                  }`}
-                >
-                  {patternSuccess ? (
-                    <Check size={20} className="font-extrabold" />
-                  ) : patternError ? (
-                    <AlertCircle size={20} />
-                  ) : (
-                    <Sparkles size={18} />
-                  )}
-                </div>
-
-                <h2 className="text-sm font-extrabold tracking-tight">
-                  {patternSuccess ? "Pattern Verified • Access Granted" : patternError ? "Incorrect Pattern • Try Again" : "Draw Unlock Pattern"}
+              <div className="text-center space-y-1 mt-8">
+                <h2 className="text-sm font-semibold tracking-tight text-white">
+                  {patternSuccess ? "Access Granted" : patternError ? "Incorrect Pattern" : "Draw Pattern"}
                 </h2>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  {patternError ? "Invalid sequence. Default: L-Shape 0→1→2→5" : "Swipe across dots (Default: 0→1→2→5)"}
-                </p>
               </div>
 
               {/* Interactive 3x3 Pattern Node Grid */}
@@ -1435,7 +1316,7 @@ export default function LockScreen({
                 onTouchStart={(e) => handlePatternStart(e.touches[0].clientX, e.touches[0].clientY)}
                 onTouchMove={(e) => handlePatternMove(e.touches[0].clientX, e.touches[0].clientY)}
                 onTouchEnd={handlePatternEnd}
-                className="relative w-60 h-60 bg-slate-950/80 border border-slate-800 rounded-3xl p-4 touch-none select-none shadow-2xl flex items-center justify-center cursor-crosshair overflow-hidden"
+                className="relative w-72 h-72 touch-none select-none flex items-center justify-center cursor-crosshair overflow-hidden my-auto"
               >
                 {/* SVG Stroke Connecting Lines */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
@@ -1483,25 +1364,17 @@ export default function LockScreen({
                         className="flex items-center justify-center relative"
                       >
                         <div
-                          className={`w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
-                            isSelected
-                              ? patternSuccess
-                                ? "bg-emerald-500/30 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)] scale-110"
-                                : patternError
-                                ? "bg-rose-500/30 border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.8)] animate-pulse"
-                                : "bg-teal-500/30 border-teal-300 shadow-[0_0_12px_rgba(45,212,191,0.8)] scale-110"
-                              : "bg-slate-900 border-slate-700/80 hover:border-slate-500"
-                          }`}
+                          className={`w-12 h-12 rounded-full transition-all flex items-center justify-center`}
                         >
                           <div
-                            className={`w-3.5 h-3.5 rounded-full transition-all ${
+                            className={`rounded-full transition-all duration-200 ${
                               isSelected
                                 ? patternSuccess
-                                  ? "bg-emerald-400 shadow"
+                                  ? "w-4 h-4 bg-emerald-400"
                                   : patternError
-                                  ? "bg-rose-400"
-                                  : "bg-teal-300 shadow"
-                                : "bg-slate-500"
+                                  ? "w-4 h-4 bg-rose-500"
+                                  : "w-4 h-4 bg-white"
+                                : "w-3 h-3 bg-white/20 border border-white/40"
                             }`}
                           />
                         </div>
@@ -1511,23 +1384,12 @@ export default function LockScreen({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-1.5 w-full pt-1 mb-8 mt-auto">
                 <button
-                  onClick={() => {
-                    setSelectedPattern([]);
-                    setPatternError(false);
-                    setPatternSuccess(false);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-semibold cursor-pointer"
+                  onClick={handleDirectUnlock}
+                  className="text-white/80 font-medium text-sm cursor-pointer hover:text-white transition-all active:scale-95"
                 >
-                  Clear Pattern
-                </button>
-
-                <button
-                  onClick={() => verifyPattern([0, 1, 2, 5])}
-                  className="px-3 py-1.5 rounded-xl bg-teal-950/80 border border-teal-500/40 text-teal-300 text-[10px] font-bold cursor-pointer hover:bg-teal-900"
-                >
-                  Test Default Pattern
+                  Cancel
                 </button>
               </div>
             </div>
@@ -1537,47 +1399,26 @@ export default function LockScreen({
           {lockTab === "pin" && (
             <>
               {/* Header & Status */}
-              <div className="flex flex-col items-center gap-2 mt-2 text-center">
-                <div
-                  className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-all ${
-                    pinSuccess
-                      ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.5)]"
-                      : pinError
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-shake"
-                      : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
-                  }`}
-                >
-                  {pinSuccess ? (
-                    <Check size={20} className="animate-bounce" />
-                  ) : pinError ? (
-                    <AlertCircle size={20} />
-                  ) : (
-                    <KeyRound size={18} />
-                  )}
-                </div>
-
-                <h2 className="text-sm font-extrabold tracking-tight">
-                  {pinSuccess ? "Access Granted" : pinError ? "Incorrect PIN" : "Enter Security PIN"}
+              <div className="flex flex-col items-center gap-2 mt-8 text-center">
+                <h2 className="text-sm font-semibold tracking-tight text-white">
+                  {pinSuccess ? "Access Granted" : pinError ? "Incorrect PIN" : "Enter PIN"}
                 </h2>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  {pinError ? "Please try again (Default: 1234)" : "Default PIN: 1234"}
-                </p>
 
                 {/* PIN Indicator Dots */}
-                <div className={`flex items-center gap-4 mt-2 ${pinError ? "animate-pulse" : ""}`}>
+                <div className={`flex items-center gap-6 mt-6 ${pinError ? "animate-pulse" : ""}`}>
                   {[0, 1, 2, 3].map((index) => {
                     const filled = pin.length > index;
                     return (
                       <div
                         key={index}
-                        className={`h-3.5 w-3.5 rounded-full border transition-all duration-150 ${
+                        className={`h-4 w-4 rounded-full transition-all duration-150 ${
                           pinSuccess
-                            ? "bg-emerald-400 border-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+                            ? "bg-white"
                             : pinError
-                            ? "bg-rose-500 border-rose-400"
+                            ? "bg-rose-500"
                             : filled
-                            ? "bg-teal-400 border-teal-300 shadow-[0_0_8px_rgba(45,212,191,0.6)] scale-110"
-                            : "bg-slate-900 border-slate-700"
+                            ? "bg-white scale-110"
+                            : "bg-white/20 border border-white/40"
                         }`}
                       />
                     );
@@ -1586,12 +1427,12 @@ export default function LockScreen({
               </div>
 
               {/* Numeric Keypad Grid */}
-              <div className="w-full max-w-[220px] grid grid-cols-3 gap-2.5 my-auto">
+              <div className="w-full max-w-[280px] grid grid-cols-3 gap-4 my-auto mt-12">
                 {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
                   <button
                     key={num}
                     onClick={() => handleKeyClick(num)}
-                    className="h-12 w-12 rounded-full bg-slate-900/90 hover:bg-teal-950/60 border border-slate-800 hover:border-teal-500/50 text-lg font-bold text-slate-100 flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto shadow-md"
+                    className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20 text-2xl font-light text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto backdrop-blur-md"
                   >
                     {num}
                   </button>
@@ -1602,41 +1443,36 @@ export default function LockScreen({
                     setPin("");
                     setPinError(false);
                   }}
-                  className="h-12 w-12 rounded-full bg-slate-900/50 hover:bg-slate-800 border border-slate-800 text-[9px] font-extrabold uppercase text-slate-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto"
+                  className="h-16 w-16 rounded-full bg-transparent text-sm font-medium text-white/60 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto"
                 >
                   Clear
                 </button>
 
                 <button
                   onClick={() => handleKeyClick("0")}
-                  className="h-12 w-12 rounded-full bg-slate-900/90 hover:bg-teal-950/60 border border-slate-800 hover:border-teal-500/50 text-lg font-bold text-slate-100 flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto shadow-md"
+                  className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20 text-2xl font-light text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto backdrop-blur-md"
                 >
                   0
                 </button>
 
                 <button
                   onClick={handleDelete}
-                  className="h-12 w-12 rounded-full bg-slate-900/50 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-300 flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto"
+                  className="h-16 w-16 rounded-full bg-transparent text-white/60 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all mx-auto"
                 >
-                  <Delete size={16} />
+                  <Delete size={20} />
                 </button>
               </div>
             </>
           )}
 
           {/* Bottom Direct Bypass Unlock */}
-          <div className="flex flex-col items-center gap-1.5 w-full pt-1">
+          <div className="flex flex-col items-center gap-1.5 w-full pt-1 mb-8">
             <button
               onClick={handleDirectUnlock}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs cursor-pointer shadow flex items-center gap-1.5 transition-all active:scale-95"
+              className="text-white/80 font-medium text-sm cursor-pointer hover:text-white transition-all active:scale-95"
             >
-              <Unlock size={14} className="text-slate-950" />
-              <span>Direct Unlock Phone</span>
+              Cancel
             </button>
-
-            <p className="text-[9px] text-slate-500 font-mono">
-              KK OS Security Authentication Daemon v2.5
-            </p>
           </div>
         </div>
       )}

@@ -20,10 +20,12 @@ import {
   Heart,
   ListMusic
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 import { playClickSound } from "../utils/sound";
 
 interface VideoItem {
   id: string;
+  videoId: string;
   title: string;
   channel: string;
   views: string;
@@ -38,6 +40,7 @@ interface VideoItem {
 const VIDEOS: VideoItem[] = [
   {
     id: "v1",
+    videoId: "jNQXAC9IVRw",
     title: "Building KK-Mobile-OS: Next-Gen Web Architecture with Gemini AI",
     channel: "Google AI Studio Engineering",
     views: "1.4M views",
@@ -49,6 +52,7 @@ const VIDEOS: VideoItem[] = [
   },
   {
     id: "v2",
+    videoId: "BddP6PYo2gs",
     title: "Kesariya & Chaiyya Chaiyya - Bollywood Live Acoustic Medley 2026",
     channel: "T-Series Acoustic",
     views: "28M views",
@@ -66,6 +70,7 @@ const VIDEOS: VideoItem[] = [
   },
   {
     id: "v3",
+    videoId: "JhHMJCUmq28",
     title: "Quantum Computing Explained in 10 Minutes (Simulated in Browser)",
     channel: "Veritasium Tech",
     views: "3.2M views",
@@ -77,6 +82,7 @@ const VIDEOS: VideoItem[] = [
   },
   {
     id: "v4",
+    videoId: "U5vAE3qkdJ4",
     title: "Grandmaster Chess AI Speedrun: Stockfish Level 8 vs KK Chess",
     channel: "Chess Royale",
     views: "890K views",
@@ -149,41 +155,45 @@ export default function AppYouTubeSuite() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="px-3 pb-3 bg-slate-900 border-b border-slate-800">
+        <div className="relative flex items-center">
+          <Search size={14} className="absolute left-3 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchQuery.trim()) {
+                const parentPhone = typeof window !== "undefined" ? localStorage.getItem("parental_phone_number") : null;
+                if (parentPhone) {
+                  recordChildActivity(searchQuery.trim(), "YouTube Suite", "search");
+                }
+              }
+            }}
+            placeholder="Search YouTube..."
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors"
+          />
+        </div>
+      </div>
+
       {/* Main Container */}
       <div className="flex-1 overflow-y-auto space-y-3">
         {/* Active Player Viewport */}
         {selectedVideo && (
           <div className="p-3 bg-slate-900 border-b border-slate-800 space-y-3">
             {suiteMode === "youtube" ? (
-              /* Video Canvas Simulation */
-              <div className={`w-full aspect-video rounded-2xl bg-gradient-to-br ${selectedVideo.thumbnailGradient} relative overflow-hidden flex flex-col justify-between p-3 shadow-2xl`}>
-                <div className="flex items-center justify-between text-xs font-mono text-white/90">
-                  <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs">1080p 60fps HDR</span>
-                  <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs">{selectedVideo.duration}</span>
-                </div>
-
-                <div className="flex items-center justify-center">
-                  <button
-                    onClick={() => {
-                      playClickSound();
-                      setIsPlaying(!isPlaying);
-                    }}
-                    className="p-4 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white cursor-pointer active:scale-95 transition-all shadow-xl"
-                  >
-                    {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-0.5" />}
-                  </button>
-                </div>
-
-                {/* Progress bar */}
-                <div className="space-y-1">
-                  <div className="w-full bg-white/20 h-1 rounded-full overflow-hidden">
-                    <motion.div
-                      animate={{ width: isPlaying ? ["20%", "75%", "90%"] : "45%" }}
-                      transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                      className="h-full bg-red-600"
-                    />
-                  </div>
-                </div>
+              /* Real YouTube Video iframe */
+              <div className="w-full aspect-video rounded-2xl relative overflow-hidden bg-black shadow-2xl">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${selectedVideo.videoId}?autoplay=${isPlaying ? 1 : 0}`}
+                  title={selectedVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
               </div>
             ) : (
               /* YouTube Music Audio Mode & Synced Lyrics */

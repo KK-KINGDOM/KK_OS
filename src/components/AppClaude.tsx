@@ -1,3 +1,4 @@
+import { generateAIResponse } from "../utils/ai";
 import React, { useState, useRef, useEffect } from "react";
 import {
   Sparkles,
@@ -13,6 +14,7 @@ import {
   Terminal,
   BookOpen
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface Message {
   id: string;
@@ -53,6 +55,8 @@ export default function AppClaude() {
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
 
+    recordChildActivity(input, "Claude AI", "ai_prompt");
+
     const userMsg: Message = {
       id: Date.now().toString(),
       sender: "user",
@@ -76,18 +80,9 @@ export default function AppClaude() {
         content: m.text
       }));
 
-      const res = await fetch("/api/gemini/chat", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          messages: payloadMessages,
-          model: "gemini-2.5-pro",
-          systemInstruction: "You are Claude 3.5 Sonnet by Anthropic. Provide exceptionally thoughtful, well-reasoned, precise answers and explanations."
-        })
-      });
-
-      const data = await res.json();
-      const replyText = data.reply || `Regarding "${promptText}": Claude 3.5 Sonnet analyzed your request carefully.`;
+      const replyText = await generateAIResponse(promptText);
+      const data = { reply: replyText };
+      const finalReply = data.reply || `Regarding "${promptText}": Claude 3.5 Sonnet analyzed your request carefully.`;
 
       let artifactData: Message["artifact"] = undefined;
       if (promptText.toLowerCase().includes("artifact") || promptText.toLowerCase().includes("ui") || promptText.toLowerCase().includes("component")) {
@@ -103,7 +98,7 @@ export default function AppClaude() {
         {
           id: (Date.now() + 1).toString(),
           sender: "claude",
-          text: replyText,
+          text: finalReply,
           thinking: "Deconstructing query logic... Assessing edge cases and nuance... Formulating response...",
           artifact: artifactData,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })

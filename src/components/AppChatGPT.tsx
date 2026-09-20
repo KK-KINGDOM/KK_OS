@@ -1,3 +1,4 @@
+import { generateAIResponse } from "../utils/ai";
 import React, { useState, useRef, useEffect } from "react";
 import {
   Bot,
@@ -16,6 +17,7 @@ import {
   MessageSquare,
   Trash2
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface Message {
   id: string;
@@ -57,6 +59,8 @@ export default function AppChatGPT() {
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
 
+    recordChildActivity(input, "ChatGPT", "ai_prompt");
+
     const userMsg: Message = {
       id: Date.now().toString(),
       sender: "user",
@@ -80,25 +84,16 @@ export default function AppChatGPT() {
         content: m.text
       }));
 
-      const res = await fetch("/api/gemini/chat", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          messages: payloadMessages,
-          model: "gemini-2.5-flash",
-          systemInstruction: "You are ChatGPT, a highly intelligent conversational AI assistant. Answer user queries and search requests with clarity, depth, and structured formatting."
-        })
-      });
-
-      const data = await res.json();
-      const replyText = data.reply || `Regarding "${userPrompt}": ChatGPT processed your search request successfully.`;
+      const replyText = await generateAIResponse(promptText);
+      const data = { reply: replyText };
+      const finalReply = data.reply || `Regarding "${userPrompt}": ChatGPT processed your search request successfully.`;
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           sender: "assistant",
-          text: replyText,
+          text: finalReply,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }
       ]);

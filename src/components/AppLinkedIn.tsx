@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { getChildName } from "../utils/parentalControl";
 import {
   Share2,
   ThumbsUp,
@@ -72,10 +73,11 @@ export default function AppLinkedIn() {
 
   const createPost = () => {
     if (!postInput.trim()) return;
+    const cName = getChildName() || "You";
     const newP: Post = {
       id: Date.now().toString(),
-      author: "You",
-      title: "Software Engineer & Architect",
+      author: cName,
+      title: "Student",
       avatarBg: "bg-emerald-600",
       timeAgo: "Just now • 🌐",
       content: postInput,
@@ -143,7 +145,7 @@ export default function AppLinkedIn() {
           <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-2 shadow-md">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                Y
+                {(getChildName() || "Y")[0].toUpperCase()}
               </div>
               <input
                 type="text"

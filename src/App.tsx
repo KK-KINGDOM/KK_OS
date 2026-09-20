@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import PhoneShell from "./components/PhoneShell";
 import { SystemToast, LogSeverity, AppID } from "./types";
 import { playLowBatterySound, playLogSound } from "./utils/sound";
+import { emitToParent } from "./utils/socket";
 
 export default function App() {
   const [systemLogs, setSystemLogs] = useState<string[]>([
@@ -20,35 +21,16 @@ export default function App() {
   const [performanceMode, setPerformanceMode] = useState<"high_performance" | "power_efficient">("power_efficient");
   const [hasNotifiedLowBattery, setHasNotifiedLowBattery] = useState<boolean>(false);
 
+  // Ping parent dashboard periodically
+  useEffect(() => {
+    const pinger = setInterval(() => {
+      emitToParent({ type: "PING", data: { status: "Online" } });
+    }, 5000);
+    return () => clearInterval(pinger);
+  }, []);
+
   // Active toast notifications with initial interactive samples
-  const [toasts, setToasts] = useState<SystemToast[]>([
-    {
-      id: "toast-init-msg",
-      logText: "[Messages] Alex Morgan: Hey, are you ready to test the new KK OS Notification Center?",
-      severity: "INFO",
-      timestamp: "10:42",
-      module: "Messages",
-      sender: "Alex Morgan",
-      message: "Hey, are you ready to test the new KK OS Notification Center? You can reply directly here!",
-      category: "message",
-      isRead: false,
-      isArchived: false,
-      appId: AppID.MESSAGES
-    },
-    {
-      id: "toast-init-sec",
-      logText: "[SecurityCore] [WARNING] SELinux Policy Engine: Background app sandboxing integrity verified.",
-      severity: "WARNING",
-      timestamp: "10:38",
-      module: "SecurityCore",
-      sender: "SELinux Shield",
-      message: "Security status optimal. 0 permission anomalies detected in process memory.",
-      category: "security",
-      isRead: true,
-      isArchived: false,
-      appId: AppID.SECURITY
-    }
-  ]);
+  const [toasts, setToasts] = useState<SystemToast[]>([]);
 
   const addSystemLog = (log: string, explicitSeverity?: LogSeverity) => {
     const timestampSec = (performance.now() / 1000).toFixed(2);
@@ -166,6 +148,7 @@ export default function App() {
   const handleBatteryChange = (newLevel: number) => {
     const clamped = Math.max(1, Math.min(100, newLevel));
     setBatteryLevel(clamped);
+    emitToParent({ type: "BATTERY_UPDATE", data: { level: clamped } });
 
     if (clamped <= 15 && !hasNotifiedLowBattery) {
       playLowBatterySound();
@@ -275,7 +258,10 @@ export default function App() {
             setPerformanceMode(mode);
             addSystemLog(`[PowerHAL] Performance profile changed to: ${mode === "high_performance" ? "High Performance" : "Power Efficient"}`);
           }}
-          onActiveAppChange={(appId) => setActiveApp(appId)}
+          onActiveAppChange={(appId) => {
+            setActiveApp(appId);
+            emitToParent({ type: "APP_CHANGE", data: { appId } });
+          }}
         />
       </main>
     </div>

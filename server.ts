@@ -4,6 +4,7 @@ import http from "http";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, GenerateVideosOperation, ThinkingLevel, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
+import { Server as SocketIOServer } from "socket.io";
 import "dotenv/config";
 
 const app = express();
@@ -14,6 +15,21 @@ app.use(express.json({ limit: "50mb" }));
 
 // Create HTTP server to attach Express and WebSocket server
 const server = http.createServer(app);
+
+// Setup Socket.io for Parent Dashboard real-time telemetry
+const io = new SocketIOServer(server, {
+  cors: { origin: "*" }
+});
+
+io.on("connection", (socket) => {
+  console.log("New socket connection:", socket.id);
+  
+  // The child phone will emit "child_activity"
+  socket.on("child_activity", (data) => {
+    // Broadcast to the parent dashboard
+    io.emit("parent_update", data);
+  });
+});
 
 // Initialize Gemini SDK lazily
 let ai: GoogleGenAI | null = null;
@@ -1174,6 +1190,22 @@ server.on("upgrade", (request, socket, head) => {
     });
   } else {
     socket.destroy();
+  }
+});
+
+// Pollinations AI Proxy for Real AI Responses
+app.post("/api/pollinations-chat", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
+    const aiRes = await fetch(`https://text.pollinations.ai/prompt/${encodeURIComponent(prompt)}`);
+    const text = await aiRes.text();
+    res.json({ reply: text });
+  } catch (error) {
+    console.error("Pollinations proxy error:", error);
+    res.status(500).json({ error: "Failed to fetch from AI provider" });
   }
 });
 

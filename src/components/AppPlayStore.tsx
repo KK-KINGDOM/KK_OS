@@ -15,8 +15,11 @@ import {
   Trash2,
   ExternalLink,
   ChevronRight,
-  Sliders
+  Sliders,
+  Gamepad2,
+  Settings
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 import { playClickSound, playAppLaunchSound } from "../utils/sound";
 
 interface PlayApp {
@@ -208,6 +211,14 @@ export default function AppPlayStore() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchQuery.trim()) {
+                const parentPhone = typeof window !== "undefined" ? localStorage.getItem("parental_phone_number") : null;
+                if (parentPhone) {
+                  recordChildActivity(searchQuery.trim(), "Play Store", "search");
+                }
+              }
+            }}
             placeholder="Search apps, games, tools..."
             className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-2xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-400 outline-none"
           />

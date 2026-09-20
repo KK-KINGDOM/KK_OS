@@ -22,23 +22,34 @@ interface DocItem {
 }
 
 export default function AppDocs() {
-  const [docs, setDocs] = useState<DocItem[]>([
-    {
-      id: "d1",
-      title: "KK OS System Specification",
-      content: "KK OS is a modular, high-performance web-based mobile operating system.\n\nKey Highlights:\n- Full Client-Side React 18 Engine\n- Multi-Model AI Ecosystem (ChatGPT, Claude, Gemini, Grok)\n- Real-Time Google Workspace Applications\n- Isolated Sandboxed Security Kernel",
-      updatedAt: "Today, 10:30 AM"
-    },
-    {
-      id: "d2",
-      title: "Q3 Product Strategy",
-      content: "Objectives for Q3:\n1. Expand cloud file synchronization across Google Drive.\n2. Enhance real-time video calls in Google Meet.\n3. Integrate live calendar reminders into LockScreen widgets.",
-      updatedAt: "Yesterday"
+  const loadDocs = () => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("kk_docs");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
     }
-  ]);
+    return [
+      {
+        id: "d1",
+        title: "KK OS System Specification",
+        content: "KK OS is a modular, high-performance web-based mobile operating system.\n\nKey Highlights:\n- Full Client-Side React 18 Engine\n- Multi-Model AI Ecosystem (ChatGPT, Claude, Gemini, Grok)\n- Real-Time Google Workspace Applications\n- Isolated Sandboxed Security Kernel",
+        updatedAt: "Today, 10:30 AM"
+      },
+      {
+        id: "d2",
+        title: "Q3 Product Strategy",
+        content: "Objectives for Q3:\n1. Expand cloud file synchronization across Google Drive.\n2. Enhance real-time video calls in Google Meet.\n3. Integrate live calendar reminders into LockScreen widgets.",
+        updatedAt: "Yesterday"
+      }
+    ];
+  };
 
-  const [activeDocIdx, setActiveDocIdx] = useState(0);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [docs, setDocs] = React.useState<DocItem[]>(loadDocs);
+  const [activeDocIdx, setActiveDocIdx] = React.useState(0);
+  const [toastMsg, setToastMsg] = React.useState<string | null>(null);
 
   const activeDoc = docs[activeDocIdx] || docs[0];
 
@@ -47,10 +58,29 @@ export default function AppDocs() {
     setTimeout(() => setToastMsg(null), 2000);
   };
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("kk_docs", JSON.stringify(docs));
+    }
+  }, [docs]);
+
+  React.useEffect(() => {
+    const handleDocSaved = () => {
+      const newDocs = loadDocs();
+      setDocs(newDocs);
+      setActiveDocIdx(newDocs.length - 1);
+      showToast("Document synced from AI!");
+    };
+    window.addEventListener("kk_doc_saved", handleDocSaved);
+    return () => window.removeEventListener("kk_doc_saved", handleDocSaved);
+  }, []);
+
   const updateDocContent = (val: string) => {
     setDocs((prev) => {
       const next = [...prev];
-      next[activeDocIdx] = { ...next[activeDocIdx], content: val };
+      if (next[activeDocIdx]) {
+        next[activeDocIdx] = { ...next[activeDocIdx], content: val };
+      }
       return next;
     });
   };

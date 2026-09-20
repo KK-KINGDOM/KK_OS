@@ -1,12 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Clock, AlarmClock, Timer, Watch, Plus } from "lucide-react";
 
 export default function AppClock() {
   const [activeTab, setActiveTab] = useState<"alarm" | "clock" | "timer">("alarm");
-  const [alarms, setAlarms] = useState([
-    { id: "1", time: "07:00 AM", label: "Morning Wakeup", active: true },
-    { id: "2", time: "08:30 AM", label: "Kernel Standup", active: false }
-  ]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  const [alarms, setAlarms] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kk_os_alarms");
+      return saved ? JSON.parse(saved) : [
+        { id: "1", time: "07:00 AM", label: "Morning Wakeup", active: true },
+        { id: "2", time: "08:30 AM", label: "Kernel Standup", active: false }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("kk_os_alarms", JSON.stringify(alarms));
+  }, [alarms]);
 
   const toggleAlarm = (id: string) => {
     setAlarms((prev) =>
@@ -17,7 +35,7 @@ export default function AppClock() {
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans p-3 space-y-3" id="app-clock">
       {/* Header */}
-      <div className="flex items-center justify-around bg-slate-900 p-2 rounded-2xl border border-slate-800">
+      <div className="flex items-center justify-around bg-slate-900 p-2 rounded-2xl border border-slate-800 shrink-0">
         <button
           onClick={() => setActiveTab("alarm")}
           className={`text-xs font-bold px-3 py-1 rounded-xl transition-colors cursor-pointer ${
@@ -59,6 +77,11 @@ export default function AppClock() {
               </button>
             </div>
           ))}
+          <div className="pt-4 flex justify-center">
+            <button className="flex items-center gap-2 text-xs font-bold text-amber-400 bg-amber-950/30 px-4 py-2 rounded-xl border border-amber-900/50 cursor-pointer">
+              <Plus size={14} /> Add Alarm
+            </button>
+          </div>
         </div>
       )}
 
@@ -66,8 +89,12 @@ export default function AppClock() {
       {activeTab === "clock" && (
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
           <Clock size={48} className="text-amber-400 animate-pulse" />
-          <h2 className="text-3xl font-extrabold text-white font-mono">10:30 AM</h2>
-          <p className="text-xs text-slate-400">Wednesday, 7 May 2026</p>
+          <h2 className="text-3xl font-extrabold text-white font-mono">
+            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
       )}
     </div>

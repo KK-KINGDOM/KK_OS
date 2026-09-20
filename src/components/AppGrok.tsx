@@ -1,3 +1,4 @@
+import { generateAIResponse } from "../utils/ai";
 import React, { useState, useRef, useEffect } from "react";
 import {
   Flame,
@@ -9,6 +10,7 @@ import {
   TrendingUp,
   MessageSquare
 } from "lucide-react";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface GrokMessage {
   id: string;
@@ -42,6 +44,8 @@ export default function AppGrok() {
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
 
+    recordChildActivity(input, "Grok AI", "ai_prompt");
+
     const userMsg: GrokMessage = {
       id: Date.now().toString(),
       sender: "user",
@@ -70,25 +74,16 @@ export default function AppGrok() {
         ? "You are Grok 2 (xAI) in Fun Mode with witty, bold, energetic responses and real-time knowledge. Direct, accurate, and humorously sharp."
         : "You are Grok 2 (xAI) in Regular Mode. Concise, direct, real-time factual insights with zero fluff.";
 
-      const res = await fetch("/api/gemini/chat", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          messages: payloadMessages,
-          model: "gemini-2.5-flash",
-          systemInstruction: sysInst
-        })
-      });
-
-      const data = await res.json();
-      const replyText = data.reply || `Grok 2 searched real-time telemetry for "${promptText}".`;
+      const replyText = await generateAIResponse(promptText);
+      const data = { reply: replyText };
+      const finalReply = data.reply || `Grok 2 searched real-time telemetry for "${promptText}".`;
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           sender: "grok",
-          text: replyText,
+          text: finalReply,
           mode,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }

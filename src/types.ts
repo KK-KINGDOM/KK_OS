@@ -89,7 +89,8 @@ export enum AppID {
   BACKUP = "backup",
   SKYPE = "skype",
   ZOOM = "zoom",
-  DOWNLOADS = "downloads"
+  DOWNLOADS = "downloads",
+  PARENT_DASHBOARD = "parent_dashboard"
 }
 
 export interface AppConfig {
@@ -157,7 +158,7 @@ export interface SystemToast {
   message?: string;
   sender?: string;
   senderAvatar?: string;
-  category?: "system" | "message" | "security" | "battery" | "app";
+  category?: "system" | "message" | "security" | "battery" | "app" | "parental";
   isRead?: boolean;
   isArchived?: boolean;
   replyText?: string;

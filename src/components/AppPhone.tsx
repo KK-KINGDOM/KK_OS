@@ -37,7 +37,7 @@ const RECENT_CALLS: CallLog[] = [
   { id: "5", name: "KK Promotions", number: "+1 (800) 555-0100", type: "outgoing", time: "Sun", avatarColor: "bg-teal-500" }
 ];
 
-export default function AppPhone() {
+export default function AppPhone({ onOpenApp }: { onOpenApp?: (appId: string) => void }) {
   const [activeTab, setActiveTab] = useState<"phone" | "contacts" | "favorites">("phone");
   const [dialedNumber, setDialedNumber] = useState("");
   const [showKeypad, setShowKeypad] = useState(true);

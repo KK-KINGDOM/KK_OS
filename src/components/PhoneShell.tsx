@@ -8,6 +8,8 @@ import {
   Home,
   ChevronLeft,
   Square,
+  Circle,
+  Triangle,
   Bot,
   Terminal as TerminalIcon,
   HardDrive,
@@ -98,8 +100,11 @@ import {
   playVolumeTickSound,
   playVolumeMuteSound,
   playVolumeMaxSound,
-  playVibrateHapticTone
+  playVibrateHapticTone,
+  playStartupSound,
+  playAppOpenSound
 } from "../utils/sound";
+import { emitToParent } from "../utils/socket";
 
 // Import system apps
 import LockScreen from "./LockScreen";
@@ -176,6 +181,8 @@ import FloatingVolumeSlider, {
   AudioStreamType,
   AudioOutputDevice
 } from "./FloatingVolumeSlider";
+import DeviceSetupScreen from "./DeviceSetupScreen";
+import { recordChildActivity } from "../utils/parentalControl";
 
 export interface HomescreenFolder {
   id: string;
@@ -266,7 +273,7 @@ function AppIconButton({
       onTouchCancel={endPress}
       onContextMenu={handleContextMenu}
       onClick={handleClick}
-      className={`flex flex-col items-center gap-1 text-center cursor-pointer group select-none relative focus:outline-none rounded-2xl p-0.5 transition-all ${
+      className={`flex flex-col items-center gap-1.5 text-center cursor-pointer group select-none relative focus:outline-none rounded-2xl p-0.5 transition-all ${
         isDragging
           ? "opacity-40 scale-90"
           : isDragOver
@@ -276,26 +283,26 @@ function AppIconButton({
       title={`Drag onto another icon to merge into a folder | Tap to open ${app.name}`}
     >
       <div
-        className={`h-11 w-11 rounded-2xl bg-gradient-to-br ${app.color} text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-all relative ${
+        className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${app.color} text-white flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all relative ${
           isDragOver
-            ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-950 scale-105 shadow-[0_0_20px_rgba(45,212,191,0.9)]"
+            ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent scale-105"
             : ""
         }`}
       >
-        <IconComponent size={20} />
+        <IconComponent size={24} strokeWidth={1.5} />
         {cacheMB !== undefined && cacheMB > 300 && (
           <span
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-400 border border-slate-950 animate-pulse"
+            className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white"
             title="High cache storage usage"
           />
         )}
         {isDragOver && (
-          <div className="absolute inset-0 bg-teal-500/80 rounded-2xl flex items-center justify-center text-[7px] font-black text-slate-950 uppercase tracking-tighter">
+          <div className="absolute inset-0 bg-blue-500/80 rounded-3xl flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter">
             MERGE
           </div>
         )}
       </div>
-      <span className="text-[9px] font-bold text-slate-100 drop-shadow-md truncate max-w-full">
+      <span className="text-[11px] font-medium text-slate-800 drop-shadow-none truncate max-w-full px-1">
         {app.name}
       </span>
     </button>
@@ -344,16 +351,16 @@ function FolderIconButton({
       onDragOver={(e) => onDragOver?.(e, folder.id)}
       onDragLeave={(e) => onDragLeave?.(e, folder.id)}
       onDrop={(e) => onDrop?.(e, folder.id)}
-      className={`flex flex-col items-center gap-1 text-center cursor-pointer group select-none relative focus:outline-none rounded-2xl p-0.5 transition-all ${
+      className={`flex flex-col items-center gap-1.5 text-center cursor-pointer group select-none relative focus:outline-none rounded-2xl p-0.5 transition-all ${
         isDragOver ? "scale-110" : "active:scale-95"
       }`}
       title={`Folder: ${folder.name} (${folderApps.length} apps) • Drag apps here to categorize`}
     >
       <div
-        className={`h-11 w-11 rounded-2xl bg-slate-900/80 backdrop-blur-md p-1 border grid grid-cols-2 gap-0.5 shadow-md group-hover:scale-105 transition-all relative overflow-hidden ${
+        className={`h-12 w-12 rounded-2xl bg-white/50 backdrop-blur-md p-1.5 grid grid-cols-2 gap-1 shadow-sm group-hover:shadow-md transition-all relative overflow-hidden ${
           isDragOver
-            ? "border-teal-400 bg-teal-950/80 shadow-[0_0_20px_rgba(45,212,191,0.9)] ring-2 ring-teal-400"
-            : "border-white/20 group-hover:border-teal-400/60"
+            ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent scale-105"
+            : ""
         }`}
       >
         {folderApps.slice(0, 4).map((app) => {
@@ -361,31 +368,28 @@ function FolderIconButton({
           return (
             <div
               key={app.id}
-              className={`rounded-md bg-gradient-to-br ${app.color} flex items-center justify-center text-white text-[10px] h-full w-full`}
+              className={`rounded-md bg-gradient-to-br ${app.color} flex items-center justify-center text-white h-full w-full`}
             >
-              <Icon size={10} />
+              <Icon size={10} strokeWidth={2} />
             </div>
           );
         })}
         {folderApps.length < 4 && (
-          <div className="rounded-md bg-slate-800/50 border border-dashed border-slate-700 flex items-center justify-center text-slate-500">
-            <Plus size={8} />
+          <div className="rounded-lg bg-black/5 flex items-center justify-center text-slate-400">
+            <Plus size={10} />
           </div>
         )}
 
         {isDragOver && (
-          <div className="absolute inset-0 bg-teal-500/80 backdrop-blur-xs flex items-center justify-center">
-            <span className="text-[7.5px] font-black text-slate-950 uppercase tracking-tighter">DROP</span>
+          <div className="absolute inset-0 bg-blue-500/80 backdrop-blur-sm flex items-center justify-center">
+            <span className="text-[10px] font-bold text-white uppercase tracking-tighter">DROP</span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-0.5 max-w-full">
-        <Folder size={10} className="text-teal-400 shrink-0" />
-        <span className="text-[9px] font-bold text-slate-100 drop-shadow-md truncate">
-          {folder.name}
-        </span>
-      </div>
+      <span className="text-[11px] font-medium text-slate-800 drop-shadow-none truncate px-1">
+        {folder.name}
+      </span>
     </button>
   );
 }
@@ -429,9 +433,17 @@ export default function PhoneShell({
   onPerformanceModeChange,
   onActiveAppChange
 }: PhoneShellProps) {
-  // Boot state
-  const [bootState, setBootState] = useState<"off" | "boot_loader" | "boot_splash" | "boot_anim" | "quantum_boot" | "lockscreen" | "launcher">("lockscreen");
-  const [isOsDownloadOpen, setIsOsDownloadOpen] = useState(false);
+  const [bootState, setBootState] = useState<"off" | "boot_loader" | "boot_splash" | "boot_anim" | "quantum_boot" | "device_setup" | "lockscreen" | "launcher">(() => {
+    if (typeof window !== "undefined") {
+      const hasSetup = localStorage.getItem("child_name") && 
+                       (localStorage.getItem("user_phone_number") || localStorage.getItem("parental_phone_number")) &&
+                       localStorage.getItem("user_email");
+      if (!hasSetup) {
+        return "device_setup";
+      }
+    }
+    return "lockscreen";
+  });  const [isOsDownloadOpen, setIsOsDownloadOpen] = useState(false);
   const [bootTheme, setBootTheme] = useState<BootTheme>("quantum_neon");
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
 
@@ -441,6 +453,15 @@ export default function PhoneShell({
     onSystemLog("[PowerHAL] Initializing KK OS secure boot daemon...", "INFO");
     onSystemLog("[Kernel] System booted to Lock Screen page.", "INFO");
   }, []);
+
+  // Broadcast system state to Parent Dashboard
+  useEffect(() => {
+    let stateString = "BOOTING";
+    if (bootState === "lockscreen") stateString = "LOCKED";
+    if (bootState === "launcher") stateString = "UNLOCKED";
+    if (bootState === "off") stateString = "OFF";
+    emitToParent({ type: "SYSTEM_STATE", data: { state: stateString, bootPhase: bootState } });
+  }, [bootState]);
   
   // Visual Tactile Vibration Feedback State
   const [vibrateTrigger, setVibrateTrigger] = useState(0);
@@ -1254,16 +1275,8 @@ export default function PhoneShell({
   };
 
   const startBootCycle = (useQuantumAnim = true) => {
-    if (useQuantumAnim) {
-      onSystemLog("[PowerHAL] Initializing Quantum Core bootloader with synthesized chimes...", "INFO");
-      setBootState("quantum_boot");
-    } else {
-      onSystemLog("[PowerHAL] Initializing cold boot cycle...");
-      setBootState("boot_loader");
-      setTimeout(() => setBootState("boot_splash"), 1000);
-      setTimeout(() => setBootState("boot_anim"), 2200);
-      setTimeout(() => setBootState("lockscreen"), 3800);
-    }
+    onSystemLog("[PowerHAL] Instant boot to lockscreen...");
+    setBootState("lockscreen");
   };
 
   const triggerQuantumBoot = (theme: BootTheme = "quantum_neon") => {
@@ -1377,6 +1390,7 @@ export default function PhoneShell({
     { id: AppID.VPN, name: "VPN apps", icon: Shield, color: "from-cyan-600 to-blue-700", category: "Tools & System", description: "Encrypted WireGuard VPN Tunnel" },
     { id: AppID.ANTIVIRUS, name: "Antivirus apps", icon: ShieldCheck, color: "from-rose-600 to-red-800", category: "Tools & System", description: "Deep Threat Antivirus Scanner" },
     { id: AppID.BACKUP, name: "Backup apps", icon: Cloud, color: "from-teal-600 to-emerald-700", category: "Tools & System", description: "Cloud Backup & System Snapshot" },
+    { id: AppID.PARENT_DASHBOARD, name: "Parent Dashboard", icon: ShieldCheck, color: "from-teal-500 to-cyan-600 border border-teal-400", category: "Tools & System", description: "Real-time Telemetry Control Center" },
 
     // 7. Games & Health
     { id: AppID.CHESS, name: "Chess", icon: Crown, color: "from-amber-600 to-yellow-800", category: "Games & Health", description: "Grandmaster AI Chess Engine" },
@@ -1479,6 +1493,12 @@ export default function PhoneShell({
   });
 
   const openApp = (appId: AppID) => {
+    if (appId === AppID.PARENT_DASHBOARD) {
+      window.open(window.location.origin + '/parent', '_blank');
+      setAppDrawerOpen(false);
+      return;
+    }
+
     playAppLaunchSound();
     if (appId === AppID.SETTINGS && settingsSubView === "network") {
       // keep network view if opened via long-press
@@ -1492,6 +1512,11 @@ export default function PhoneShell({
     setQuickSettingsOpen(false);
     setRecentApps((prev) => [appId, ...prev.filter((id) => id !== appId)]);
     onSystemLog(`[ActivityManager] Resuming App Intent: ${appId}`);
+
+    // Log app launch for monitoring
+    const appInfo = allApps.find((a) => a.id === appId);
+    const appName = appInfo ? appInfo.name : appId;
+    recordChildActivity(`Opened ${appName}`, "App Launcher", "app_launch");
   };
 
   const handleCloseRecentApp = (appId: AppID) => {
@@ -1531,26 +1556,17 @@ export default function PhoneShell({
 
   return (
     <div className="relative mx-auto flex items-center justify-center p-2 lg:p-6" id="phone-device-wrapper">
-      {/* Phone chassis with haptic tactile vibration motion */}
-      <motion.div
-        key={vibrateTrigger}
-        animate={
-          vibrateTrigger > 0
-            ? vibrateIntensity === "heavy"
-              ? { x: [0, -5, 5, -4, 4, -2, 2, 0], y: [0, 3, -3, 2, -2, 0] }
-              : vibrateIntensity === "medium"
-              ? { x: [0, -3, 3, -2, 2, 0], y: [0, 2, -2, 0] }
-              : { x: [0, -2, 2, -1, 1, 0], y: [0, 1, -1, 0] }
-            : { x: 0, y: 0 }
-        }
-        transition={{ duration: vibrateIntensity === "heavy" ? 0.22 : 0.12, ease: "easeInOut" }}
+      {/* Phone chassis without screen shake on vibration */}
+      <div
         className="relative h-[680px] w-[340px] rounded-[48px] bg-slate-950 p-[12px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border-4 border-slate-800 ring-1 ring-slate-700/50 flex flex-col overflow-hidden"
       >
         
         {/* Notch / Camera camera block */}
-        <div className="absolute top-[12px] left-1/2 -translate-x-1/2 h-[22px] w-[110px] bg-black rounded-b-2xl z-50 flex items-center justify-center gap-1.5 border-x border-b border-slate-900">
-          <span className="h-2 w-2 rounded-full bg-slate-900 border border-slate-800 animate-pulse" />
-          <span className="h-1 w-10 rounded-full bg-slate-800" />
+        <div className="absolute top-[12px] left-1/2 -translate-x-1/2 h-[28px] w-[110px] bg-black rounded-full z-50 flex items-center justify-center gap-2 border border-slate-900 shadow-sm">
+          <span className="h-3 w-3 rounded-full bg-indigo-950/20 border border-indigo-900/30 flex items-center justify-center">
+            <span className="h-1.5 w-1.5 rounded-full bg-black" />
+          </span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" />
         </div>
 
         {/* Physical Power Button (Right) */}
@@ -1703,8 +1719,55 @@ export default function PhoneShell({
             <BootAnimation
               initialTheme={bootTheme}
               onComplete={() => {
-                setBootState("lockscreen");
-                onSystemLog?.("[Kernel] Quantum Boot Sequence completed. Handing over to Lock Screen.", "INFO");
+                const hasSetup = typeof window !== "undefined" && 
+                                 localStorage.getItem("child_name") && 
+                                 (localStorage.getItem("user_phone_number") || localStorage.getItem("parental_phone_number")) &&
+                                 localStorage.getItem("user_email");
+                if (!hasSetup) {
+                  setBootState("device_setup");
+                  onSystemLog?.("[Kernel] Boot completed. Launching Device Personalization Setup.", "INFO");
+                } else {
+                  setBootState("lockscreen");
+                  onSystemLog?.("[Kernel] Quantum Boot Sequence completed. Handing over to Lock Screen.", "INFO");
+                }
+              }}
+              onSystemLog={onSystemLog}
+            />
+          )}
+
+          {/* 4c. DEVICE PROFILE SETUP SCREEN (CHILD NAME & PHONE NUMBER) */}
+          {bootState === "device_setup" && (
+            <DeviceSetupScreen
+              onComplete={({ childName, phoneNumber }) => {
+                setBootState("launcher");
+                playUnlockSound();
+                onSystemLog?.(`[DeviceSetup] Setup complete! Entering launcher for ${childName} (${phoneNumber})`, "INFO");
+
+                // 1. Dispatch real-time SMS into Messages app
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(
+                    new CustomEvent("kk_new_sms_received", {
+                      detail: {
+                        threadId: "parental_link_sms",
+                        sender: `Parent (${phoneNumber})`,
+                        message: `Hi ${childName}! Your device setup is complete. This phone is now active and connected to ${phoneNumber}.`
+                      }
+                    })
+                  );
+                }
+
+                // 2. Dispatch interactive incoming SMS Toast notification
+                setTimeout(() => {
+                  onSimulateNotification?.({
+                    title: `💬 SMS from Parent (${phoneNumber})`,
+                    message: `Hi ${childName}! Your device setup is complete. This phone is now active and connected.`,
+                    sender: `Parent (${phoneNumber})`,
+                    module: "Messages",
+                    category: "message",
+                    severity: "INFO",
+                    appId: AppID.MESSAGES
+                  });
+                }, 600);
               }}
               onSystemLog={onSystemLog}
             />
@@ -1722,6 +1785,17 @@ export default function PhoneShell({
               onUnlock={() => {
                 playUnlockSound();
                 setBootState("launcher");
+                onSystemLog?.("[Kernel] Lock screen dismissed. Launching desktop.", "INFO");
+              }}
+              onEmergencyCall={() => {
+                setBootState("launcher");
+                setActiveApp(AppID.PHONE);
+                onSystemLog?.("[ActivityManager] Emergency Dialer dispatched.", "WARNING");
+              }}
+              onQuickCamera={() => {
+                setBootState("launcher");
+                setActiveApp(AppID.CAMERA);
+                onSystemLog?.("[ActivityManager] Lock screen shortcut: Camera launched.", "INFO");
               }}
             />
           )}
@@ -1740,8 +1814,7 @@ export default function PhoneShell({
                   : undefined
               }
             >
-              {/* Wallpaper Pattern Overlay Mesh Layer */}
-              <div className="absolute inset-0 pointer-events-none os-wallpaper-pattern-overlay opacity-30 z-0" />
+              <div className="absolute inset-0 pointer-events-none bg-black/10 z-0" />
 
               {/* SYSTEM-WIDE DARK MODE & WARM LOW-BLUE LIGHT FILTER OVERLAY */}
               {darkModeScheduler.enabled && darkModeScheduler.isWarmActive && (
@@ -2656,8 +2729,8 @@ export default function PhoneShell({
                         transition={{ type: "spring", stiffness: 380, damping: 28 }}
                         className="absolute inset-0 bg-slate-950 z-20 flex flex-col"
                       >
-                      {activeApp === AppID.PHONE && <AppPhone />}
-                      {activeApp === AppID.CONTACTS && <AppPhone />}
+                      {activeApp === AppID.PHONE && <AppPhone onOpenApp={openApp} />}
+                      {activeApp === AppID.CONTACTS && <AppPhone onOpenApp={openApp} />}
                       {activeApp === AppID.BROWSER && <AppBrowser />}
                       {activeApp === AppID.CHROME && <AppBrowser />}
                       {activeApp === AppID.MESSAGES && <AppMessages />}
@@ -3066,15 +3139,11 @@ export default function PhoneShell({
                 </OSGestureHandler>
               </motion.div>
 
-              {/* MODERN GESTURE NAVIGATION BAR (Swipe-up for Recents, Tap for Home, Back key) */}
+              {/* CLASSIC 3-BUTTON NAVIGATION BAR */}
               <div
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-                onMouseDown={handleTouchStart}
-                onMouseUp={handleTouchEnd}
-                className="relative h-[34px] flex items-center justify-between px-3 bg-black/95 border-t border-slate-900/80 z-35 shrink-0 select-none text-slate-400 group"
+                className="relative h-[48px] flex items-center justify-around px-12 bg-black border-t border-slate-900/80 z-40 shrink-0 select-none text-slate-400"
               >
-                {/* Back Key (Left) */}
+                {/* Back Key (Triangle) */}
                 <button
                   onClick={() => {
                     if (appSwitcherOpen) {
@@ -3086,39 +3155,15 @@ export default function PhoneShell({
                       onSystemLog("[ActivityManager] Back gesture executed.");
                     }
                   }}
-                  className="p-1 rounded-full hover:bg-slate-900 hover:text-white transition-colors cursor-pointer active:scale-95"
-                  title="Back (or swipe in from left/right edge)"
+                  className="p-3 rounded-full hover:bg-slate-900 hover:text-white transition-colors cursor-pointer active:scale-95"
+                  title="Back"
                 >
-                  <ChevronLeft size={16} />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12L20 4V20L4 12Z" />
+                  </svg>
                 </button>
 
-                {/* Central Interactive Gesture Navigation Handle */}
-                <div
-                  onClick={() => {
-                    if (appSwitcherOpen) {
-                      setAppSwitcherOpen(false);
-                    } else {
-                      setActiveApp(null);
-                      setAppDrawerOpen(false);
-                      onSystemLog("[ActivityManager] Home gesture: Navigated to Home.");
-                    }
-                  }}
-                  className="flex-1 flex flex-col items-center justify-center py-1 cursor-pointer group/pill"
-                  title="Swipe up for Recent Apps • Tap for Home"
-                >
-                  <div
-                    className={`h-1.5 rounded-full transition-all duration-200 shadow-sm ${
-                      appSwitcherOpen
-                        ? "w-28 bg-teal-400 shadow-[0_0_10px_rgba(45,212,191,0.7)]"
-                        : "w-24 bg-slate-600 group-hover/pill:bg-teal-400 group-hover/pill:w-28"
-                    }`}
-                  />
-                  <span className="text-[7.5px] font-mono text-slate-400 group-hover/pill:text-teal-300 transition-colors mt-0.5 tracking-tight">
-                    {appSwitcherOpen ? "Tap to close Recents" : "↑ Swipe up for Recents • Tap Home"}
-                  </span>
-                </div>
-
-                {/* Home Indicator Icon / Quick Action (Right) */}
+                {/* Home Key (Circle) */}
                 <button
                   onClick={() => {
                     setActiveApp(null);
@@ -3126,10 +3171,27 @@ export default function PhoneShell({
                     setAppSwitcherOpen(false);
                     onSystemLog("[ActivityManager] Home button clicked.");
                   }}
-                  className="p-1 rounded-full hover:bg-slate-900 hover:text-white transition-colors cursor-pointer active:scale-95"
+                  className="p-3 rounded-full hover:bg-slate-900 hover:text-white transition-colors cursor-pointer active:scale-95"
                   title="Home Screen"
                 >
-                  <Home size={14} />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                </button>
+
+                {/* Recents Key (Square) */}
+                <button
+                  onClick={() => {
+                    setAppSwitcherOpen(!appSwitcherOpen);
+                    if (appDrawerOpen) setAppDrawerOpen(false);
+                    onSystemLog("[ActivityManager] Recents button toggled.");
+                  }}
+                  className="p-3 rounded-full hover:bg-slate-900 hover:text-white transition-colors cursor-pointer active:scale-95"
+                  title="Recent Apps"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                  </svg>
                 </button>
               </div>
 
@@ -3184,7 +3246,7 @@ export default function PhoneShell({
           />
 
         </div>
-      </motion.div>
+      </div>
 
       {/* Storage Manager Utility Modal */}
       <StorageManagerModal

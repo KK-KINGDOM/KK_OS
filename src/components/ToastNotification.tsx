@@ -17,7 +17,9 @@ import {
   ChevronUp,
   MessageSquare,
   Sparkles,
-  Layers
+  Layers,
+  ShieldCheck,
+  Smartphone
 } from "lucide-react";
 import { SystemToast, AppID } from "../types";
 import { playClickSound, playAppLaunchSound } from "../utils/sound";
@@ -55,7 +57,8 @@ function ToastItem({
 }: ToastItemProps) {
   const isCritical = toast.severity === "CRITICAL";
   const isMessage = toast.category === "message";
-  const durationMs = isCritical ? 10000 : 7500;
+  const isParental = toast.category === "parental";
+  const durationMs = isCritical ? 10000 : isParental ? 8500 : 7500;
 
   const [progress, setProgress] = useState(100);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -111,6 +114,8 @@ function ToastItem({
         filter: "blur(0px)",
         boxShadow: isCritical
           ? "0 10px 30px rgba(244,63,94,0.45)"
+          : isParental
+          ? "0 10px 30px rgba(16,185,129,0.45)"
           : isMessage
           ? "0 10px 28px rgba(45,212,191,0.35)"
           : "0 10px 25px rgba(245,158,11,0.35)"
@@ -130,6 +135,8 @@ function ToastItem({
           ? "bg-slate-950/90 border-slate-700 text-slate-300"
           : isCritical
           ? "bg-slate-950/98 border-rose-500/90 text-rose-100 ring-1 ring-rose-500/30"
+          : isParental
+          ? "bg-slate-950/98 border-emerald-500/90 text-emerald-100 ring-1 ring-emerald-500/30"
           : isMessage
           ? "bg-slate-950/98 border-teal-500/80 text-teal-100 ring-1 ring-teal-500/30"
           : "bg-slate-950/98 border-amber-500/80 text-amber-100 ring-1 ring-amber-500/30"
@@ -148,6 +155,10 @@ function ToastItem({
             >
               <AlertOctagon size={13} />
             </motion.div>
+          ) : isParental ? (
+            <div className="p-1 rounded-lg bg-emerald-950 border border-emerald-700 text-emerald-400 shrink-0">
+              <Smartphone size={13} />
+            </div>
           ) : isMessage ? (
             <div className="p-1 rounded-lg bg-teal-950 border border-teal-800 text-teal-400 shrink-0">
               <MessageSquare size={13} />
@@ -170,12 +181,14 @@ function ToastItem({
                 ? "bg-slate-900 border-slate-700 text-slate-400"
                 : isCritical
                 ? "bg-rose-900/70 border-rose-700 text-rose-300"
+                : isParental
+                ? "bg-emerald-900/80 border-emerald-600 text-emerald-300"
                 : isMessage
                 ? "bg-teal-900/70 border-teal-700 text-teal-300"
                 : "bg-amber-900/70 border-amber-700 text-amber-300"
             }`}
           >
-            {toast.isRead ? "READ" : toast.severity}
+            {toast.isRead ? "READ" : isParental ? "PARENT ALERT" : toast.severity}
           </span>
         </div>
 

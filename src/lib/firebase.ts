@@ -17,7 +17,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
@@ -176,6 +177,77 @@ export async function deleteBackedUpFileFromCloud(docId: string) {
     await firestoreDeleteDoc(docRef);
   } catch (error) {
     console.error("Error deleting cloud file backup:", error);
+    throw error;
+  }
+}
+
+// Log user search activity for parental control
+export async function logSearchActivity(parentPhone: string | null, queryText: string, appSource: string) {
+  if (!parentPhone) return;
+  try {
+    const logsRef = collection(db, "parental_logs");
+    await addDoc(logsRef, {
+      parentPhone,
+      query: queryText,
+      appSource,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Error logging search activity to Firestore:", error);
+  }
+}
+
+// Fetch user search logs for parental control dashboard
+export async function getParentalLogs(parentPhone: string) {
+  try {
+    const logsRef = collection(db, "parental_logs");
+    const q = query(logsRef, where("parentPhone", "==", parentPhone));
+    const querySnapshot = await getDocs(q);
+    const logs: any[] = [];
+    querySnapshot.forEach((docSnap) => {
+      logs.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    // Sort by timestamp descending (newest first) since we don't have a composite index guaranteed
+    logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return logs;
+  } catch (error) {
+    console.error("Error fetching parental logs from Firestore:", error);
+    return [];
+  }
+}
+
+// Real-time listener for parental control dashboard
+export function listenToParentalLogs(parentPhone: string, onUpdate: (logs: any[]) => void) {
+  const logsRef = collection(db, "parental_logs");
+  const q = query(logsRef, where("parentPhone", "==", parentPhone));
+  
+  return onSnapshot(q, (querySnapshot: any) => {
+    const logs: any[] = [];
+    querySnapshot.forEach((docSnap: any) => {
+      logs.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    logs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // Sort ascending for feed view
+    onUpdate(logs);
+  }, (error: any) => {
+    console.error("Error listening to parental logs:", error);
+  });
+}
+
+// Clear all search logs for a specific parent phone
+export async function clearParentalLogs(parentPhone: string) {
+  try {
+    const { deleteDoc: firestoreDeleteDoc } = await import("firebase/firestore");
+    const logsRef = collection(db, "parental_logs");
+    const q = query(logsRef, where("parentPhone", "==", parentPhone));
+    const querySnapshot = await getDocs(q);
+    
+    // Delete all matched logs
+    const deletePromises = querySnapshot.docs.map((docSnap) => 
+      firestoreDeleteDoc(doc(db, "parental_logs", docSnap.id))
+    );
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error("Error clearing parental logs:", error);
     throw error;
   }
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AppID } from "../types";
 import { playClickSound, playAppLaunchSound } from "../utils/sound";
+import { recordChildActivity } from "../utils/parentalControl";
 
 interface GlobalSearchBarProps {
   allApps: Array<{
@@ -81,6 +82,9 @@ export default function GlobalSearchBar({ allApps, onOpenApp, onSystemLog }: Glo
 
     try {
       onSystemLog?.(`[GlobalSearch] Executing Gemini AI query: "${searchQuery}"`, "INFO");
+
+      // Log for parental controls & live notification
+      recordChildActivity(searchQuery, "Global Search", "search");
 
       const customKey = localStorage.getItem("kk_custom_gemini_api_key") || "";
       const headers: Record<string, string> = { "Content-Type": "application/json" };
