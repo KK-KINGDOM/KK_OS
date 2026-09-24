@@ -37,6 +37,7 @@ mobile features.
 ## 👨‍💻 Developer
 
 **KRISHNAKUMAR (KK)**
+**Madhumitha Murali**
 
 ---
 ## 🔗 Connect With Me
@@ -53,6 +54,18 @@ https://github.com/KRISHNAKUMARP20
 
 [kk6308608@gmail.com](mailto:kk6308608@gmail.com)
 
+## 🔗 Connect With Me
+
+### 💼 LinkedIn
+
+linkedin.com/in/madhumitha-murali2006
+### 🐙 GitHub
+
+https://github.com/Madhu4579
+
+### 📧 Email
+
+[tharanimurali94@gmail.com](mailto:tharanimurali94@gmail.com)
 
 ---
 
