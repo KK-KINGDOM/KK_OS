@@ -98,7 +98,7 @@ https://github.com/manas-37
 
 ### 📧 Email
 
-[manasarajesh3307@gmail.com](mailto: manasarajesh3307@gmail.com)
+[manasarajesh3307@gmail.com](mailto:manasarajesh3307@gmail.com)
 ---
 
 ⭐ This project is under active development.
