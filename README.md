@@ -69,6 +69,19 @@ https://github.com/Madhu4579
 ### 📧 Email
 
 [tharanimurali94@gmail.com](mailto:tharanimurali94@gmail.com)
+## 🔗 Connect With Me
+
+### 💼 LinkedIn
+
+https://www.linkedin.com/in/kales-wari
+
+### 🐙 GitHub
+
+https://github.com/kales-10
+
+### 📧 Email
+
+[kaleswari84@gmail.com](mailto:kaleswari84@gmail.com)
 
 ---
 
