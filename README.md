@@ -37,6 +37,8 @@ mobile features.
 ## 👨‍💻 Developer
 
 **KRISHNAKUMAR (KK)**
+
+
 **Madhumitha Murali**
 
 ---
@@ -58,7 +60,8 @@ https://github.com/KRISHNAKUMARP20
 
 ### 💼 LinkedIn
 
-linkedin.com/in/madhumitha-murali2006
+https://www.linkedin.com/in/madhumitha-murali2006
+
 ### 🐙 GitHub
 
 https://github.com/Madhu4579
