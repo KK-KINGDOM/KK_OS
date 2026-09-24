@@ -85,6 +85,19 @@ https://github.com/kales-10
 
 [kaleswari84@gmail.com](mailto:kaleswari84@gmail.com)
 
+## 🔗 Connect With Me
+
+### 💼 LinkedIn
+
+https://www.linkedin.com/in/manasa-rajesh-075618331
+
+### 🐙 GitHub
+
+https://github.com/manas-37
+
+### 📧 Email
+
+[manasarajesh3307@gmail.com](mailto: manasarajesh3307@gmail.com)
 ---
 
 ⭐ This project is under active development.
